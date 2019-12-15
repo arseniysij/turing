@@ -9,7 +9,8 @@ var gulp         = require('gulp'),
 		newer        = require('gulp-newer'),
 		rename       = require('gulp-rename'),
 		responsive   = require('gulp-responsive'),
-		del          = require('del');
+		del          = require('del'),
+		webp 		 = require('gulp-webp');
 
 // Local Server
 gulp.task('browser-sync', function() {
@@ -77,11 +78,40 @@ gulp.task('img-responsive-2x', async function() {
 		.pipe(rename(function (path) {path.extname = path.extname.replace('jpeg', 'jpg')}))
 		.pipe(gulp.dest('app/img/@2x'))
 });
+
+// Конвертация в webP
+gulp.task('webp-1x', async function() {
+	return gulp.src('app/img/_src/**/*.{png,jpg,jpeg,webp,raw}')
+		.pipe(newer('app/img/@webp1x'))
+		.pipe(responsive({
+			'**/*': { width: '50%', quality: quality }
+		})).on('error', function (e) { console.log(e) })
+		.pipe(webp({
+				lossless: true	
+			}))
+			.pipe(gulp.dest('app/img/webp@1x'))
+});
+
+// Конвертация в webP
+gulp.task('webp-2x', async function() {
+	return gulp.src('app/img/_src/**/*.{png,jpg,jpeg,webp,raw}')
+		.pipe(newer('app/img/@webp1x'))
+		.pipe(responsive({
+			'**/*': { width: '100%', quality: quality }
+		})).on('error', function (e) { console.log(e) })
+		.pipe(webp({
+				lossless: true	
+			}))
+			.pipe(gulp.dest('app/img/webp@2x'))
+});
+
 gulp.task('img', gulp.series('img-responsive-1x', 'img-responsive-2x', bsReload));
+gulp.task('make-webp', gulp.parallel('webp-1x', 'webp-2x', bsReload));
+
 
 // Clean @*x IMG's
-gulp.task('cleanimg', function() {
-	return del(['app/img/@*'], { force: true })
+gulp.task('cleaning', function() {
+	return del(['app/img/@*', 'app/img/webp@*'], { force: true })
 });
 
 // Code & Reload
@@ -110,7 +140,7 @@ gulp.task('watch', function() {
 	gulp.watch('app/sass/**/*.sass', gulp.parallel('styles'));
 	gulp.watch(['app/js/_custom.js', 'app/js/_libs.js'], gulp.parallel('scripts'));
 	gulp.watch('app/*.html', gulp.parallel('code'));
-	gulp.watch('app/img/_src/**/*', gulp.parallel('img'));
+	gulp.watch('app/img/_src/**/*', gulp.parallel('img', 'make-webp'));
 });
 
-gulp.task('default', gulp.parallel('img', 'styles', 'scripts', 'browser-sync', 'watch'));
+gulp.task('default', gulp.parallel('img', 'make-webp', 'styles', 'scripts', 'browser-sync', 'watch'));
